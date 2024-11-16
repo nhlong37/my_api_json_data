@@ -26,7 +26,7 @@ class _CreateScreenState extends State<CreateScreen> {
   Uint8List? _imgData;
   String? _imgFileName;
   Loaisanpham? _selectedOption;
-  ApiService _apiService =  ApiService();
+  ApiService _apiService = ApiService();
 
   @override
   void initState() {
@@ -47,8 +47,8 @@ class _CreateScreenState extends State<CreateScreen> {
       _selectedOption = option;
     });
   }
- 
-   void getLoai() async {
+
+  void getLoai() async {
     try {
       final data = await _apiService.getLoai();
       setState(() {
@@ -57,6 +57,20 @@ class _CreateScreenState extends State<CreateScreen> {
     } catch (e) {
       print("Lỗi load dữ liệu từ server: $e");
     }
+  }
+
+  Future<void> _showDiaLog(String title, String message) async {
+    return showDialog(
+        context: context,
+        builder: (BuildContext content) {
+          return AlertDialog(
+              title: Text(title),
+              content: Text(message),
+              actions: [
+                TextButton(
+                    onPressed: () => Navigator.pop(context), child: Text("OK"))
+              ]);
+        });
   }
 
   Future<void> _pickImage() async {
@@ -69,7 +83,7 @@ class _CreateScreenState extends State<CreateScreen> {
           _imgData = result.files.single.bytes;
         });
       } else {
-        showDialog(context: context, builder: (context) => AlertDialog(content: Text("Chưa có dữ liệu"), actions: [TextButton(onPressed: () => Navigator.pop(context), child: Text("OK"))]));
+        _showDiaLog("Thông báo", "Chưa có dữ liệu");
       }
     } else {
       //Sử dụng image_picker trong trường hợp là mobile
@@ -77,32 +91,45 @@ class _CreateScreenState extends State<CreateScreen> {
       final pickerFile = await picker.pickImage(source: ImageSource.gallery);
       if (pickerFile != null) {
         var result = await pickerFile.readAsBytes();
-        setState(() { 
+        setState(() {
           _imgFileName = pickerFile.path.split('/').last;
           _imgData = result;
         });
       } else {
-        showDialog(context: context, builder: (context) => AlertDialog(content: Text("Chưa có dữ liệu"), actions: [TextButton(onPressed: () => Navigator.pop(context), child: Text("OK"))]));
+        _showDiaLog("Thông báo", "Chưa có dữ liệu");
       }
     }
   }
 
   Future<void> _submitForm() async {
-    if(_formKey.currentState!.validate()){
+    if (_formKey.currentState!.validate()) {
       try {
-        final url = Uri.parse('${widget.serverURL}/api-demo/api/themSanPham.php');
+        final url =
+            Uri.parse('${widget.serverURL}/api-demo/api/themSanPham.php');
         var request = http.MultipartRequest('POST', url);
-        request.fields['name'] = _nameController.text;
-        request.fields['price'] = _priceController.text;
-        request.fields['description'] = _descriptionController.text;
-        request.fields['id_loai'] = _selectedOption?.id.toString() ?? '';
+        request.fields['ten'] = _nameController.text;
+        request.fields['gia'] = _priceController.text;
+        request.fields['mo_ta'] = _descriptionController.text;
+        request.fields['loai_id'] = _selectedOption?.id.toString() ?? '';
+        if (_imgData != null) {
+          request.files.add(http.MultipartFile.fromBytes('hinh', _imgData!,
+              filename: _imgFileName!));
+        }
+        var response = await request.send();
+        if (response.statusCode == 200) {
+          _showDiaLog("Thành công", "Thêm sản phẩm thành công");
+          return;
+        } else {
+          var responseData = await http.Response.fromStream(response);
+          var json = jsonDecode(responseData.body);
+          _showDiaLog("Lỗi", jsonDecode(json['error']));
+          return;
+        }
       } catch (e) {
-        
+        _showDiaLog("Lỗi", "$e");
+        return;
       }
-    }
-    else{
-
-    }
+    } else {}
   }
 
   @override
