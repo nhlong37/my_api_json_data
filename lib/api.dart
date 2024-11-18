@@ -21,13 +21,14 @@ class ApiService {
     }
   }
 
+
    Future<List<Loaisanpham>> getLoai() async {
     final response = await http.get(Uri.parse("${serverURL}/api-demo/api/dsLoai.php"));
     if (response.statusCode == 200) {
-      List<Loaisanpham> listSanpham = (jsonDecode(response.body) as List)
+      List<Loaisanpham> listLoai = (jsonDecode(response.body) as List)
           .map((data) => Loaisanpham.fromJson(data))
           .toList();
-      return listSanpham;
+      return listLoai;
     } else {
       throw Exception('Lỗi load dữ liệu từ server');
     }

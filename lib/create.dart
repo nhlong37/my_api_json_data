@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:product_management/api.dart';
+import 'package:product_management/listcolor/color.dart';
 import 'package:product_management/model/loaisanpham.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
@@ -17,8 +18,8 @@ class CreateScreen extends StatefulWidget {
 }
 
 class _CreateScreenState extends State<CreateScreen> {
-  // late Future<List<Loaisanpham>> futureLoai;
-  List<Loaisanpham>? futureLoai;
+  late Future<List<Loaisanpham>> futureLoai;
+  // List<Loaisanpham>? futureLoai;
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _priceController = TextEditingController();
@@ -31,32 +32,21 @@ class _CreateScreenState extends State<CreateScreen> {
   @override
   void initState() {
     super.initState();
-    getLoai();
+    futureLoai = _apiService.getLoai();
   }
 
   @override
   void dispose() {
+    super.dispose();
     _nameController.dispose();
     _priceController.dispose();
     _descriptionController.dispose();
-    super.dispose();
   }
 
   void _selectOption(Loaisanpham? option) {
     setState(() {
       _selectedOption = option;
     });
-  }
-
-  void getLoai() async {
-    try {
-      final data = await _apiService.getLoai();
-      setState(() {
-        futureLoai = data;
-      });
-    } catch (e) {
-      print("Lỗi load dữ liệu từ server: $e");
-    }
   }
 
   Future<void> _showDiaLog(String title, String message) async {
@@ -73,6 +63,24 @@ class _CreateScreenState extends State<CreateScreen> {
         });
   }
 
+  Future<void> _showDialogAfterAddProduct(String title, String message) async {
+    return showDialog(
+        context: context,
+        builder: (BuildContext content) {
+          return AlertDialog(
+              title: Text(title),
+              content: Text(message),
+              actions: [
+                TextButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      Navigator.pop(context);
+                    },
+                    child: Text("OK"))
+              ]);
+        });
+  }
+
   Future<void> _pickImage() async {
     if (kIsWeb) {
       //Sử dụng file_picker trong trường hợp là web
@@ -82,8 +90,6 @@ class _CreateScreenState extends State<CreateScreen> {
           _imgFileName = result.files.single.name;
           _imgData = result.files.single.bytes;
         });
-      } else {
-        _showDiaLog("Thông báo", "Chưa có dữ liệu");
       }
     } else {
       //Sử dụng image_picker trong trường hợp là mobile
@@ -95,8 +101,6 @@ class _CreateScreenState extends State<CreateScreen> {
           _imgFileName = pickerFile.path.split('/').last;
           _imgData = result;
         });
-      } else {
-        _showDiaLog("Thông báo", "Chưa có dữ liệu");
       }
     }
   }
@@ -117,7 +121,7 @@ class _CreateScreenState extends State<CreateScreen> {
         }
         var response = await request.send();
         if (response.statusCode == 200) {
-          _showDiaLog("Thành công", "Thêm sản phẩm thành công");
+          _showDialogAfterAddProduct("Thành công", "Thêm sản phẩm thành công");
           return;
         } else {
           var responseData = await http.Response.fromStream(response);
@@ -134,6 +138,118 @@ class _CreateScreenState extends State<CreateScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return const Text("Đây là trang tạo");
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: ColorList.mediumdarkcyan,
+        // title: Text("Thêm sản phẩm".toUpperCase(),
+        //     style: TextStyle(color: Colors.white, fontSize: 32.0)),
+        iconTheme: IconThemeData(color: Colors.white),
+        // centerTitle: true,
+      ),
+      body: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 100, 16, 32),
+        child: Column(
+          children: [
+            Container(
+                margin: EdgeInsets.only(bottom: 5.0),
+                child: Text(
+                  "Thêm sản phẩm".toUpperCase(),
+                  style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+                  textAlign: TextAlign.center,
+                )),
+            Form(
+              key: _formKey,
+              child: Column(
+                children: [
+                  FutureBuilder(
+                      future: futureLoai,
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState == ConnectionState.waiting) {
+                          return CircularProgressIndicator();
+                        } else if (snapshot.hasError) {
+                          return Text(
+                              "Error: loading dropdown options ${snapshot.error}");
+                        } else {
+                          return DropdownButtonFormField<Loaisanpham>(
+                            value: _selectedOption,
+                            validator: (value) => value == null
+                                ? "Vui lòng chọn loại sản phẩm"
+                                : null,
+                            items: snapshot.data!.map((option) {
+                              return DropdownMenuItem<Loaisanpham>(
+                                value: option,
+                                child: Text(option.tenloai),
+                              );
+                            }).toList(),
+                            onChanged: (value) {
+                              _selectedOption = value;
+                            },
+                            decoration: InputDecoration(labelText: "Loại Sản Phẩm"),
+                          );
+                        }
+                      }),
+                  SizedBox(height: 16.0),
+                  TextFormField(
+                    controller: _nameController,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return "Vui lòng nhập tên sản phẩm";
+                      }
+                      return null;
+                    },
+                    decoration: InputDecoration(labelText: "Tên sản phẩm"),
+                  ),
+                  SizedBox(height: 16.0),
+                  TextFormField(
+                    controller: _priceController,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return "Vui liệu nhập gia sản phẩm";
+                      }
+                      return null;
+                    },
+                    decoration: InputDecoration(labelText: "Giá sản phẩm"),
+                  ),
+                  SizedBox(height: 16.0),
+                  TextFormField(
+                    controller: _descriptionController,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return "Vui lòng nhập mô tả";
+                      }
+                      return null;
+                    },
+                    decoration: InputDecoration(labelText: "Mô tả sản phẩm"),
+                  ),
+                  SizedBox(height: 16.0),
+                  Column(
+                    children: [
+                      _imgData == null
+                          ? Text("Chưa có dữ liệu")
+                          : Image.memory(
+                              _imgData!,
+                              height: 200,
+                            ),
+                      SizedBox(height: 5.0),
+                      ElevatedButton(
+                        onPressed: _pickImage,
+                        child: Text("Chọn hình"),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 20.0),
+                  ElevatedButton(
+                    onPressed: () {
+                      _submitForm();
+                    },
+                    child: Text("Thêm"),
+                  )
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
