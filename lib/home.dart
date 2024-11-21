@@ -23,19 +23,31 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    futureSanpham = _api.getSanpham();
+    getSanpham();
   }
 
-  // void getSanpham() async {
-  //   try {
-  //     final data = await _api.getSanpham();
-  //     setState(() {
-  //       futureSanpham = data;
-  //     });
-  //   } catch (e) {
-  //     print("Lỗi load dữ liệu từ server: $e");
-  //   }
-  // }
+  Future<void> getSanpham() async {
+    try {
+      setState(() {
+    futureSanpham = _api.getSanpham();
+      });
+    } catch (e) {
+      print("Lỗi load dữ liệu từ server: $e");
+    }
+  }
+
+  Future<void> deleteSanpham(int id, String name) async {
+    try {
+      await _api.deleteSanpham(id, name);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Xoá thành công' + name), duration: Duration(seconds: 1),),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Lỗi: $e'), duration: Duration(seconds: 1),),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -134,7 +146,34 @@ class _HomeScreenState extends State<HomeScreen> {
                                       ),
                                       IconButton(
                                         onPressed: () {
-                                          
+                                          showDialog(
+                                              context: context,
+                                              builder: (BuildContext context) {
+                                                return AlertDialog(
+                                                  title: Text("Thông báo"),
+                                                  content: Text(
+                                                      "Bạn có chắn muốn xoá " +
+                                                          snapshot.data![index]
+                                                              .tensanpham! +
+                                                          " ?"),
+                                                  actions: [
+                                                    TextButton(
+                                                        onPressed: () =>
+                                                            Navigator.pop(
+                                                                context),
+                                                        child: Text("Huỷ")),
+                                                    TextButton(
+                                                      onPressed: () async {
+                                                        await deleteSanpham(snapshot
+                                                            .data![index].id!, snapshot.data![index].tensanpham!);
+                                                        await getSanpham();
+                                                        Navigator.pop(context);
+                                                      },
+                                                      child: Text("Đồng ý"),
+                                                    ),
+                                                  ],
+                                                );
+                                              });
                                         },
                                         icon: const Icon(Icons.delete),
                                       ),
