@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:product_management/api.dart';
-import 'package:product_management/create.dart';
+import 'package:product_management/detail.dart';
 import 'package:product_management/listcolor/color.dart';
 import 'package:product_management/model/sanpham.dart';
 import 'package:flutter/material.dart';
@@ -116,14 +116,26 @@ class _HomeScreenState extends State<HomeScreen> {
                                         MainAxisAlignment.spaceBetween,
                                     children: [
                                       IconButton(
-                                        onPressed: () {},
+                                        onPressed: () {
+                                          Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                  builder: (context) =>
+                                                      DetailScreen(
+                                                        serverURL:
+                                                            widget.serverURL,
+                                                        id: snapshot.data![index].id,
+                                                      )));
+                                        },
                                         icon: const Icon(Icons.edit),
                                       ),
                                       SizedBox(
                                         width: 5.0,
                                       ),
                                       IconButton(
-                                        onPressed: () {},
+                                        onPressed: () {
+                                          
+                                        },
                                         icon: const Icon(Icons.delete),
                                       ),
                                     ],
@@ -145,8 +157,9 @@ class _HomeScreenState extends State<HomeScreen> {
           Navigator.push(
               context,
               MaterialPageRoute(
-                  builder: (context) => CreateScreen(
+                  builder: (context) => DetailScreen(
                         serverURL: widget.serverURL,
+                        id: 0,
                       )));
         },
         child: Icon(

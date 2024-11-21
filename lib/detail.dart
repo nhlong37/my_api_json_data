@@ -8,18 +8,21 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
+import 'package:product_management/model/sanpham.dart';
 
-class CreateScreen extends StatefulWidget {
+class DetailScreen extends StatefulWidget {
   final String serverURL;
-  const CreateScreen({super.key, required this.serverURL});
+  final int id;
+  const DetailScreen({super.key, required this.serverURL, required this.id});
 
   @override
-  State<CreateScreen> createState() => _CreateScreenState();
+  State<DetailScreen> createState() => _DetailScreenState();
 }
 
-class _CreateScreenState extends State<CreateScreen> {
+class _DetailScreenState extends State<DetailScreen> {
   late Future<List<Loaisanpham>> futureLoai;
-  // List<Loaisanpham>? futureLoai;
+  late Future<List<Sanpham>> futureSanpham;
+  late Future<void> futureDetailSanpham;
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _priceController = TextEditingController();
@@ -27,12 +30,23 @@ class _CreateScreenState extends State<CreateScreen> {
   Uint8List? _imgData;
   String? _imgFileName;
   Loaisanpham? _selectedOption;
-  ApiService _apiService = ApiService();
+  ApiService _api = ApiService();
 
   @override
   void initState() {
     super.initState();
-    futureLoai = _apiService.getLoai();
+    futureLoai = _api.getLoai();
+    getDetailSanpham(widget.id);
+  }
+
+  Future<void> getSanpham() async {
+    try {
+      setState(() {
+        futureSanpham = _api.getSanpham();
+      });
+    } catch (e) {
+      print("Lỗi load dữ liệu từ server: $e");
+    }
   }
 
   @override
@@ -72,9 +86,13 @@ class _CreateScreenState extends State<CreateScreen> {
               content: Text(message),
               actions: [
                 TextButton(
-                    onPressed: () {
-                      Navigator.pop(context);
-                      Navigator.pop(context);
+                    onPressed: () async {
+                      // Context.mounted kiểm tra future chạy xong nó mới thực thi
+                      if (context.mounted) {
+                        Navigator.pop(context);
+                      }
+                      await getSanpham();
+                      setState(() {});
                     },
                     child: Text("OK"))
               ]);
@@ -122,6 +140,7 @@ class _CreateScreenState extends State<CreateScreen> {
         var response = await request.send();
         if (response.statusCode == 200) {
           _showDialogAfterAddProduct("Thành công", "Thêm sản phẩm thành công");
+
           return;
         } else {
           var responseData = await http.Response.fromStream(response);
@@ -133,18 +152,18 @@ class _CreateScreenState extends State<CreateScreen> {
         _showDiaLog("Lỗi", "$e");
         return;
       }
-    } else {}
+    }
   }
 
+    Future<Sanpham?> getDetailSanpham(int id) async {
+    await _api.detailSanpham(id!);
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: ColorList.mediumdarkcyan,
-        // title: Text("Thêm sản phẩm".toUpperCase(),
-        //     style: TextStyle(color: Colors.white, fontSize: 32.0)),
         iconTheme: IconThemeData(color: Colors.white),
-        // centerTitle: true,
       ),
       body: Padding(
         padding: const EdgeInsets.fromLTRB(16, 100, 16, 32),
@@ -153,7 +172,9 @@ class _CreateScreenState extends State<CreateScreen> {
             Container(
                 margin: EdgeInsets.only(bottom: 5.0),
                 child: Text(
-                  "Thêm sản phẩm".toUpperCase(),
+                  widget.id == 0
+                      ? "Thêm mới Sản Phẩm".toUpperCase()
+                      : "Cập nhật Sản Phẩm".toUpperCase(),
                   style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
                   textAlign: TextAlign.center,
                 )),
@@ -164,7 +185,8 @@ class _CreateScreenState extends State<CreateScreen> {
                   FutureBuilder(
                       future: futureLoai,
                       builder: (context, snapshot) {
-                        if (snapshot.connectionState == ConnectionState.waiting) {
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
                           return CircularProgressIndicator();
                         } else if (snapshot.hasError) {
                           return Text(
@@ -184,7 +206,8 @@ class _CreateScreenState extends State<CreateScreen> {
                             onChanged: (value) {
                               _selectedOption = value;
                             },
-                            decoration: InputDecoration(labelText: "Loại Sản Phẩm"),
+                            decoration:
+                                InputDecoration(labelText: "Loại Sản Phẩm"),
                           );
                         }
                       }),
